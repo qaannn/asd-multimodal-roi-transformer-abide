@@ -4,13 +4,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import os
 import numpy as np
 import pandas as pd
-from src.config import TABEL_DIR, METRICS_DIR, SEED
+from src.config import prepare_environment, TABEL_DIR, METRICS_DIR, SEED
 from src.data import prepare_dataset
 from src.baselines import oof_linear
 from src.stats import load_deep, summary, pairwise
 
 
 def main():
+    prepare_environment()
     rng = np.random.default_rng(SEED)
     D = prepare_dataset(); y = D["y"]
     path = METRICS_DIR + "oof_linear.npz"

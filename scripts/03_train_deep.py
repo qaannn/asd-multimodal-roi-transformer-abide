@@ -3,13 +3,14 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
 import pandas as pd
-from src.config import (TABEL_DIR, METRICS_DIR, CFG, MODEL_KW, DO_TUNE, N_TRIALS, SEARCH_SEED,
+from src.config import (prepare_environment, TABEL_DIR, METRICS_DIR, CFG, MODEL_KW, DO_TUNE, N_TRIALS, SEARCH_SEED,
                         SEEDS_FINAL, MIN_RECALL)
 from src.data import prepare_dataset
 from src.training import DEV, sample_grid, tune, run_experiment, summarize_pct
 
 
 def main():
+    prepare_environment()
     print("Perangkat:", DEV)
     if DEV == "cpu":
         raise RuntimeError("Runtime masih CPU (sangat lambat). Aktifkan GPU (Colab: Runtime > Change runtime type > T4).")

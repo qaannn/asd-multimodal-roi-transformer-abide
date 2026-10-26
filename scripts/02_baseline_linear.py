@@ -3,12 +3,13 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pandas as pd
-from src.config import TABEL_DIR, METRICS_DIR
+from src.config import prepare_environment, TABEL_DIR, METRICS_DIR
 from src.data import prepare_dataset
 from src.baselines import run_all, oof_linear
 
 
 def main():
+    prepare_environment()
     D = prepare_dataset()
     print("Batas tebakan (selalu 'kontrol'):", round(1 - D["y"].mean(), 3))
     per_fold, table = run_all(D)

@@ -16,6 +16,8 @@ def fix_age(a):
 
 def load_clinical_safe(csv_path):
     """Memuat dan membersihkan fitur klinis dari CSV lokal (NaN dipertahankan)."""
+    if not os.path.exists(csv_path):
+        raise FileNotFoundError(f"CSV fenotipik tidak ditemukan: {csv_path}. Periksa ASD_DATA_DIR dan pastikan Drive ter-mount.")
     df = pd.read_csv(csv_path, sep=";")
     df = df[df["DX_GROUP"].isin([1, 2])].copy()
     for c in FEATURES:

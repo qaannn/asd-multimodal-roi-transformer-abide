@@ -1,9 +1,9 @@
 # Folder hasil
 
-Isi awal folder `tabel/` (`baseline_linear_ringkas.csv`, `deep_ablation_ringkas.csv`, `uji_ringkas_oof.csv`,
-`uji_berpasangan.csv`, `tabel_alur_kohort.csv`) **disalin dari keluaran eksekusi di Colab** yang dikirim penulis,
-bukan dihasilkan ulang saat repo ini disusun. Menjalankan skrip `scripts/01`-`04` akan menimpa file-file ini
-dengan keluaran asli beserta berkas per-fold, tuning, dan prediksi out-of-fold (`metrics/*.npz`).
-`tabel_demografi.csv` dan `tabel_per_situs.csv` belum disertakan karena baru dihasilkan oleh `scripts/01`.
-Angka deep learning pada `deep_ablation_ringkas.csv` berasal dari ringkasan eksekusi yang disalin ke dokumentasi;
-verifikasi dengan `tabel/deep_ablation_per_fold.csv` setelah menjalankan ulang.
+- `tabel/tabel_alur_kohort.csv`, `tabel_demografi.csv`, `tabel_data_hilang.csv`, `tabel_per_situs.csv`: keluaran
+  `scripts/01` (tidak bergantung pada pengaturan penanda hilang). Disalin dari keluaran eksekusi Colab.
+- `tabel/run1_dengan_penanda_hilang/`: **run 1** (semua fitur klinis + penanda nilai hilang). Disalin dari keluaran
+  `scripts/02`, `03`, `04` pada satu kali eksekusi. Dipertahankan sebagai **analisis sensitivitas**, bukan hasil utama
+  (lihat README: penanda `EYE_STATUS_AT_SCAN` hilang terkait diagnosis).
+- Hasil utama (tanpa penanda hilang, pengaturan default) akan dihasilkan oleh `scripts/02`-`07` dan ditaruh di
+  `tabel/` dan `metrics/` setelah dijalankan ulang; jalankan dengan `ASD_RESULT_DIR` berbeda dari run 1.

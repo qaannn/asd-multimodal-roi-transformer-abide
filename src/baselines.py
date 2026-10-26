@@ -9,13 +9,13 @@ from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_sc
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.svm import SVC
 
-from .config import SEED, CLIN7, IU
+from .config import SEED, CLIN7, IU, USE_MISSING_INDICATORS
 
 
 def clin_block(D, cols=CLIN7):
     def f(tr, te):
         X = D["clin"][:, cols]
-        imp = SimpleImputer(strategy="median", add_indicator=True); sc = StandardScaler()
+        imp = SimpleImputer(strategy="median", add_indicator=USE_MISSING_INDICATORS); sc = StandardScaler()
         Xtr = sc.fit_transform(imp.fit_transform(X[tr]))
         return Xtr, sc.transform(imp.transform(X[te]))
     return f
@@ -106,7 +106,7 @@ def oof_linear(D):
     for k in sorted(np.unique(fold)):
         te, tr = fold == k, fold != k
         sc = StandardScaler(); a_tr = sc.fit_transform(X_conn[tr]); a_te = sc.transform(X_conn[te])
-        imp = SimpleImputer(strategy="median", add_indicator=True); sc2 = StandardScaler()
+        imp = SimpleImputer(strategy="median", add_indicator=USE_MISSING_INDICATORS); sc2 = StandardScaler()
         b_tr = sc2.fit_transform(imp.fit_transform(X_clin[tr])); b_te = sc2.transform(imp.transform(X_clin[te]))
         p_conn[te] = LogisticRegression(C=0.001, class_weight="balanced", max_iter=3000).fit(a_tr, y[tr]).predict_proba(a_te)[:, 1]
         p_clin[te] = SVC(kernel="rbf", C=1.0, class_weight="balanced", probability=True,

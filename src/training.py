@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import (accuracy_score, recall_score, precision_score,
                              f1_score, roc_auc_score, roc_curve)
 
-from .config import CLIN7, CFG, MODEL_KW, N_TRIALS, SEARCH_SEED
+from .config import CLIN7, CFG, MODEL_KW, N_TRIALS, SEARCH_SEED, USE_MISSING_INDICATORS
 from .models import ROIFusionNet
 
 DEV = "cuda" if torch.cuda.is_available() else "cpu"
@@ -34,6 +34,8 @@ def prep_clin_safe(D, fit_idx):
     """Anti-kebocoran: imputasi median + scaler di-fit HANYA pada data latih fold ini."""
     X = D["clin"][:, CLIN7].astype(np.float64)
     miss = np.isnan(X).astype(np.float32)
+    if not USE_MISSING_INDICATORS:
+        miss = np.zeros_like(miss)                      # tanpa penanda hilang (lihat config)
     imp = SimpleImputer(strategy="median").fit(X[fit_idx])
     sc = StandardScaler().fit(imp.transform(X[fit_idx]))
     return sc.transform(imp.transform(X)).astype(np.float32), miss

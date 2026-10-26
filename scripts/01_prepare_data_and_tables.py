@@ -3,12 +3,13 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pandas as pd
-from src.config import CSV_PATH, TABEL_DIR
+from src.config import prepare_environment, CSV_PATH, TABEL_DIR
 from src.data import prepare_dataset
 from src.tables import tabel_alur_kohort, tabel_demografi, tabel_hilang, tabel_situs
 
 
 def main():
+    prepare_environment()
     D = prepare_dataset()                               # umur sudah dikoreksi (fix_age)
     raw = pd.read_csv(CSV_PATH, sep=";")
     out = {"tabel_alur_kohort": tabel_alur_kohort(raw, D["sub_id"], D["y"]),

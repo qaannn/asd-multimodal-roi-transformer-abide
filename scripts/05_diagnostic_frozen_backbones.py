@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import StandardScaler
-from src.config import CACHE_DIR, TABEL_DIR
+from src.config import prepare_environment, CACHE_DIR, TABEL_DIR
 from src.data import prepare_dataset
 from src.baselines import run_cv, run_cv_late, clin_block, SVM_P
 
@@ -58,6 +58,7 @@ def run_conn_deep(D, out=CACHE_DIR):
 
 
 def main():
+    prepare_environment()
     D = prepare_dataset()
     extract_conn_feats(D)                                   # butuh torch, torchvision, timm (GPU disarankan)
     table = run_conn_deep(D)
