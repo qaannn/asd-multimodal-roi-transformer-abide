@@ -199,7 +199,7 @@ def load_abide2_phenotypic(raw_dir=DCAN_RAW_DIR):
                 open(f, "wb").write(_http_get(f"{BASE}/{s}participants.tsv"))
             except Exception as e:                           # noqa: BLE001
                 print(f"  participants.tsv {name} gagal: {e}"); continue
-        std, lp = standardize_abide2(pd.read_csv(f, sep="\t"), name.replace("ABIDEII-", ""))
+        std, lp = standardize_abide2(pd.read_csv(f, sep="\t", encoding="latin1"), name.replace("ABIDEII-", ""))
         frames.append(std); lap[name] = lp
     if not frames:
         raise RuntimeError("Tidak ada participants.tsv ABIDE II yang berhasil diunduh")
