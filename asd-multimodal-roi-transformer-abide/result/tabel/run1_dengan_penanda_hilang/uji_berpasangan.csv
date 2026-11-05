@@ -1,0 +1,8 @@
+A,B,A benar/B salah,A salah/B benar,p_McNemar,dAUC,CI95_dAUC,p_Holm,Signifikan (Holm<0.05)
+Late fusion (LogReg + SVM),Konektivitas saja (LogReg),85,47,0.0012,0.050,"[0.033, 0.068]",0.0036,Ya
+Late fusion (LogReg + SVM),Klinis saja (SVM),134,75,0.0001,0.073,"[0.042, 0.099]",0.0003,Ya
+Late fusion (LogReg + SVM),Deep: + klinis (concat),152,72,0.0000,0.080,"[0.050, 0.110]",0.0000,Ya
+Late fusion (LogReg + SVM),Deep: + klinis (cross-attention),169,78,0.0000,0.124,"[0.092, 0.155]",0.0000,Ya
+Konektivitas saja (LogReg),Deep: ROI-Transformer (konek. saja),147,88,0.0001,0.088,"[0.058, 0.119]",0.0006,Ya
+Deep: ROI-Transformer (konek. saja),Deep: + klinis (concat),129,146,0.3346,-0.058,"[-0.094, -0.022]",0.6693,Tidak
+Deep: + klinis (concat),Deep: + klinis (cross-attention),144,133,0.5480,0.043,"[0.006, 0.079]",0.6693,Tidak
