@@ -1,9 +1,10 @@
 # Folder hasil
 
-- `tabel/tabel_alur_kohort.csv`, `tabel_demografi.csv`, `tabel_data_hilang.csv`, `tabel_per_situs.csv`: keluaran
-  `scripts/01` (tidak bergantung pada pengaturan penanda hilang). Disalin dari keluaran eksekusi Colab.
-- `tabel/run1_dengan_penanda_hilang/`: **run 1** (semua fitur klinis + penanda nilai hilang). Disalin dari keluaran
-  `scripts/02`, `03`, `04` pada satu kali eksekusi. Dipertahankan sebagai **analisis sensitivitas**, bukan hasil utama
-  (lihat README: penanda `EYE_STATUS_AT_SCAN` hilang terkait diagnosis).
-- Hasil utama (tanpa penanda hilang, pengaturan default) akan dihasilkan oleh `scripts/02`-`07` dan ditaruh di
-  `tabel/` dan `metrics/` setelah dijalankan ulang; jalankan dengan `ASD_RESULT_DIR` berbeda dari run 1.
+Semua angka berasal dari keluaran eksekusi Colab (repo ini, pengaturan default: tanpa penanda nilai hilang) yang disalin ke sini;
+jalankan ulang skrip untuk menimpa dengan berkas asli (per-fold, tuning, prediksi out-of-fold di `metrics/`).
+
+- `tabel/` (hasil utama, run 2): `baseline_linear_ringkas`, `deep_ablation_ringkas`, `uji_ringkas_oof`, `uji_berpasangan`,
+  `situs_auc`, `situs_ringkasan`, `situs_late_fusion_vs_lain`, `ablasi_fitur_klinis`, serta `tabel_alur_kohort`,
+  `tabel_demografi`, `tabel_data_hilang`, `tabel_per_situs`.
+- `tabel/run1_dengan_penanda_hilang/`: run 1 (dengan penanda nilai hilang), disimpan sebagai analisis sensitivitas.
+- `figure/situs_auc.png` dibuat oleh `scripts/06`; salin dari folder hasil di Drive bila ingin disertakan.

@@ -1,5 +1,5 @@
 """Pelatihan 5-fold: early stopping (val AUC), ensemble seed, ambang dari validasi, random search."""
-import os, time, json
+import os, time, json, shutil
 import numpy as np
 import pandas as pd
 import torch
@@ -13,6 +13,7 @@ from sklearn.metrics import (accuracy_score, recall_score, precision_score,
 
 from .config import CLIN7, CFG, MODEL_KW, N_TRIALS, SEARCH_SEED, USE_MISSING_INDICATORS
 from .models import ROIFusionNet
+from .harmonize import harmonize_matrices
 
 DEV = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -48,7 +49,8 @@ def predict_proba(model, idx, M_t, X_t, Ms_t, bs=64):
         out.append(torch.softmax(model(M_t[j], X_t[j], Ms_t[j]), 1)[:, 1].cpu())
     return torch.cat(out).numpy()
 
-def train_one_fold(D, k, fusion, cfg=CFG, model_kw=MODEL_KW, seed=42, split_seed=42, verbose=True):
+def train_one_fold(D, k, fusion, cfg=CFG, model_kw=MODEL_KW, seed=42, split_seed=42, verbose=True,
+                   harmonize=False, ckpt_path=None):
     np.random.seed(seed); torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
     y = D["y"]
     te = np.where(D["fold"] == k)[0]
@@ -56,13 +58,14 @@ def train_one_fold(D, k, fusion, cfg=CFG, model_kw=MODEL_KW, seed=42, split_seed
     tr, va = train_test_split(tr_all, test_size=0.15, stratify=y[tr_all], random_state=split_seed)
 
     Xs, miss = prep_clin_safe(D, tr)
-    M_t = torch.from_numpy(D["M"]).float().to(DEV)
+    M_np = harmonize_matrices(D, tr) if harmonize else D["M"]       # ComBat dipelajari hanya dari data latih fold ini
+    M_t = torch.from_numpy(M_np).float().to(DEV)
     X_t, Ms_t = torch.from_numpy(Xs).to(DEV), torch.from_numpy(miss).to(DEV)
     y_t = torch.from_numpy(y).long().to(DEV)
     cnt = np.bincount(y[tr], minlength=2)
     w = torch.tensor(len(tr) / (2.0 * cnt), dtype=torch.float32, device=DEV)      # bobot kelas seimbang
 
-    model = ROIFusionNet(fusion=fusion, n_clin=len(CLIN7), **model_kw).to(DEV)
+    model = ROIFusionNet(fusion=fusion, n_roi=int(D["M"].shape[-1]), n_clin=len(CLIN7), **model_kw).to(DEV)
     opt = torch.optim.AdamW(model.parameters(), lr=cfg["lr"], weight_decay=cfg["wd"])
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=cfg["epochs"])
 
@@ -92,7 +95,12 @@ def train_one_fold(D, k, fusion, cfg=CFG, model_kw=MODEL_KW, seed=42, split_seed
             break
 
     model.load_state_dict(best_state)
-    return dict(te=te, va=va, best_epoch=best_ep,
+    if ckpt_path:                                                    # simpan bobot terbaik (berdasarkan val AUC) yang portabel (CPU)
+        os.makedirs(os.path.dirname(ckpt_path), exist_ok=True)
+        torch.save(dict(state_dict={n: v.cpu() for n, v in best_state.items()}, fusion=fusion, n_roi=int(D["M"].shape[-1]),
+                        n_clin=len(CLIN7), model_kw=dict(model_kw), cfg=dict(cfg), fold=int(k), seed=int(seed),
+                        val_auc=float(best_auc), best_epoch=int(best_ep), harmonize=bool(harmonize)), ckpt_path)
+    return dict(te=te, va=va, best_epoch=best_ep, val_auc=float(best_auc),
                 p_te=predict_proba(model, te, M_t, X_t, Ms_t),
                 p_va=predict_proba(model, va, M_t, X_t, Ms_t))
 
@@ -101,8 +109,14 @@ def _metrics_at(y, p, thr):
     return dict(acc=accuracy_score(y, pred), recall=recall_score(y, pred, zero_division=0),
                 precision=precision_score(y, pred, zero_division=0), f1=f1_score(y, pred, zero_division=0))
 
-def pick_threshold(y_va, p_va, min_recall=None):
-    """Ambang dipilih HANYA dari validasi. Default Youden; min_recall=0.8 -> prioritas recall."""
+def pick_threshold(y_va, p_va, min_recall=None, criterion="youden"):
+    """Ambang dipilih HANYA dari validasi. criterion: 'youden' (default) | 'acc' (akurasi validasi tertinggi;
+    seri -> yang terdekat dengan 0,5). min_recall=0.8 -> prioritas recall (hanya untuk 'youden')."""
+    if criterion == "acc":
+        cands = np.unique(np.r_[0.5, p_va])
+        accs = np.array([((p_va >= t).astype(int) == y_va).mean() for t in cands])
+        ties = cands[np.isclose(accs, accs.max())]
+        return float(ties[np.argmin(np.abs(ties - 0.5))])
     fpr, tpr, thr = roc_curve(y_va, p_va)
     i = int(np.argmax(tpr - fpr))
     if min_recall is not None:
@@ -111,17 +125,23 @@ def pick_threshold(y_va, p_va, min_recall=None):
             i = int(ok[0])
     return float(np.clip(thr[i], 0.0, 1.0))
 
-def run_experiment(D, fusion, folds=range(5), seeds=(42,), min_recall=None, quiet=False, oof_path=None, **kw):
+def run_experiment(D, fusion, folds=range(5), seeds=(42,), min_recall=None, quiet=False, oof_path=None,
+                   harmonize=False, ckpt_dir=None, ckpt_tag="", criterion="youden", **kw):
     """Per fold: latih beberapa seed, rata-ratakan probabilitas (ensemble), pilih ambang dari validasi."""
     y, rows = D["y"], []
     oof_p = np.full(len(y), np.nan, dtype=np.float32); oof_thr = np.full(len(y), np.nan, dtype=np.float32)
+    ck_all = []
     for k in folds:
         t0 = time.time()
-        outs = [train_one_fold(D, k, fusion, seed=s, verbose=not quiet, **kw) for s in seeds]
+        outs = [train_one_fold(D, k, fusion, seed=s, verbose=not quiet, harmonize=harmonize,
+                               ckpt_path=(f"{ckpt_dir}{ckpt_tag}_f{k}_s{s}.pth" if ckpt_dir else None), **kw) for s in seeds]
+        for s, o in zip(seeds, outs):
+            if ckpt_dir:
+                ck_all.append((o["val_auc"], f"{ckpt_dir}{ckpt_tag}_f{k}_s{s}.pth"))
         te, va = outs[0]["te"], outs[0]["va"]
         p_te = np.mean([o["p_te"] for o in outs], axis=0)
         p_va = np.mean([o["p_va"] for o in outs], axis=0)
-        thr = pick_threshold(y[va], p_va, min_recall)
+        thr = pick_threshold(y[va], p_va, min_recall, criterion)
         oof_p[te], oof_thr[te] = p_te, thr
         row = dict(model=fusion, fold=k, n_seeds=len(seeds), best_epochs=[o["best_epoch"] for o in outs],
                    val_auc=roc_auc_score(y[va], p_va), auc=roc_auc_score(y[te], p_te), thr=round(thr, 3))
@@ -131,6 +151,8 @@ def run_experiment(D, fusion, folds=range(5), seeds=(42,), min_recall=None, quie
         if not quiet:
             print(f"== {fusion} | fold {k} | val AUC {row['val_auc']:.3f} | TEST AUC {row['auc']:.3f} | "
                   f"ambang {thr:.2f}: acc {row['acc_thr']:.3f} recall {row['recall_thr']:.3f} | {time.time() - t0:.0f} dtk")
+    if ck_all:                                     # salin checkpoint dengan val AUC tertinggi (bukan AUC tes) sebagai *_best.pth
+        shutil.copy(max(ck_all)[1], f"{ckpt_dir}{ckpt_tag}_best.pth")
     if oof_path:                                   # prediksi per subjek (untuk uji McNemar nanti)
         np.savez(oof_path, p=oof_p, thr=oof_thr, y=y, fold=D["fold"], sub_id=D.get("sub_id", np.arange(len(y))))
     return pd.DataFrame(rows)

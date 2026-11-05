@@ -26,19 +26,43 @@ def site_block(D):
         return oh.fit_transform(S[tr]), oh.transform(S[te])
     return f
 
-def conn_raw_block(D):                      # segitiga atas, di-standardisasi pada train
-    X = np.stack([m[IU] for m in D["M"]])
+def _conn_features(D):
+    """Segitiga atas matriks korelasi -> (N, p); ukuran ROI mengikuti data (200 / 205 / 352 / 379)."""
+    iu = np.triu_indices(D["M"].shape[-1], k=1)
+    return D["M"][:, iu[0], iu[1]]
+
+
+def _cov_filled(D, fit_idx):
+    """Kovariat ComBat (umur, jenis kelamin); nilai kosong diisi median DATA LATIH."""
+    c = np.asarray(D["clin"][:, [0, 1]], np.float64)
+    return np.where(np.isnan(c), np.nanmedian(c[fit_idx], axis=0), c)
+
+
+def conn_raw_block(D, harmonize=False):     # segitiga atas, (opsional ComBat dari data latih), di-standardisasi pada train
+    X = _conn_features(D)
+    if harmonize:
+        from .harmonize import ComBat, fisher_z, site_labels_for_combat
+        Z = fisher_z(X).astype(np.float32)
     def f(tr, te):
-        sc = StandardScaler(); return sc.fit_transform(X[tr]), sc.transform(X[te])
+        if harmonize:
+            cov = _cov_filled(D, tr)
+            batch = site_labels_for_combat(D["site"], tr)
+            cb = ComBat().fit(Z[tr], batch[tr], cov[tr])
+            A, B = cb.transform(Z[tr], batch[tr], cov[tr]), cb.transform(Z[te], batch[te], cov[te])
+        else:
+            A, B = X[tr], X[te]
+        sc = StandardScaler(); return sc.fit_transform(A), sc.transform(B)
     return f
 
+
 def conn_pca_block(D, n_pca=50):
-    X = np.stack([m[IU] for m in D["M"]])
+    X = _conn_features(D)
     def f(tr, te):
         sc = StandardScaler(); pca = PCA(n_components=n_pca, random_state=SEED)
         Xtr = pca.fit_transform(sc.fit_transform(X[tr])); Xte = pca.transform(sc.transform(X[te]))
         s = Xtr.std(0).mean(); return Xtr / s, Xte / s
     return f
+
 
 def early_fusion_block(img_f, clin_f, w=1.0):
     def f(tr, te):
@@ -65,6 +89,21 @@ def run_cv(D, name, block, clf_factory):
         score = clf.decision_function(Xte) if hasattr(clf, "decision_function") else np.zeros(te.sum())
         rows.append(_metrics(name, k, D["y"][te], clf.predict(Xte), score))
     return pd.DataFrame(rows)
+
+def run_cv_oof(D, name, block, clf_factory):
+    """Seperti run_cv, tetapi juga mengembalikan prediksi out-of-fold (kelas pada ambang bawaan model & skor)."""
+    y, rows = D["y"], []
+    pred, score = np.zeros(len(y), int), np.zeros(len(y))
+    for k in sorted(np.unique(D["fold"])):
+        te, tr = D["fold"] == k, D["fold"] != k
+        Xtr, Xte = block(tr, te)
+        clf = clf_factory().fit(Xtr, y[tr])
+        s = clf.decision_function(Xte) if hasattr(clf, "decision_function") else clf.predict_proba(Xte)[:, 1]
+        p = clf.predict(Xte)
+        pred[te], score[te] = p, s
+        rows.append(_metrics(name, k, y[te], p, s))
+    return pd.DataFrame(rows), pred, score
+
 
 def run_cv_late(D, name, img_f, img_clf, clin_f, clin_clf):
     """Late fusion: rata-rata probabilitas dua model terpisah (pembanding untuk early fusion)."""
@@ -98,14 +137,14 @@ def run_all(D):
     return per_fold, table
 
 
-def oof_linear(D):
+def oof_linear(D, harmonize=False):
     y, fold, N = D["y"], D["fold"], len(D["y"])
-    X_conn = np.stack([m[IU] for m in D["M"]])
+    conn_f = conn_raw_block(D, harmonize)
     X_clin = D["clin"][:, CLIN7]
     p_conn, p_clin = np.zeros(N), np.zeros(N)
     for k in sorted(np.unique(fold)):
         te, tr = fold == k, fold != k
-        sc = StandardScaler(); a_tr = sc.fit_transform(X_conn[tr]); a_te = sc.transform(X_conn[te])
+        a_tr, a_te = conn_f(tr, te)
         imp = SimpleImputer(strategy="median", add_indicator=USE_MISSING_INDICATORS); sc2 = StandardScaler()
         b_tr = sc2.fit_transform(imp.fit_transform(X_clin[tr])); b_te = sc2.transform(imp.transform(X_clin[te]))
         p_conn[te] = LogisticRegression(C=0.001, class_weight="balanced", max_iter=3000).fit(a_tr, y[tr]).predict_proba(a_te)[:, 1]

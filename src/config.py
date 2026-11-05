@@ -17,10 +17,20 @@ METRICS_DIR = os.path.join(RESULT_DIR, "metrics") + os.sep
 FIGURE_DIR = os.path.join(RESULT_DIR, "figure") + os.sep
 
 
+# --- DCAN (ABIDE I + II, pipeline ABCD-HCP) ---
+DCAN_RAW_DIR = os.environ.get("ASD_DCAN_DIR", "/content/raw_dcan")          # unduhan mentah (lokal Colab, sementara)
+# Atlas DCAN: Markov2012FreeSurferSubcortical (205 ROI, paling ringan; mirip CC200),
+#             Gordon2014FreeSurferSubcortical (352 ROI), HCP2016FreeSurferSubcortical (379 ROI)
+DCAN_ATLAS = os.environ.get("ASD_DCAN_ATLAS", "Markov2012FreeSurferSubcortical")
+DCAN_MIN_SECONDS = float(os.environ.get("ASD_DCAN_MIN_SECONDS", "120"))      # sisa detik minimal pada FD <= DCAN_FD
+DCAN_FD = 0.3
+CKPT_DIR = os.path.join(METRICS_DIR, "ckpt") + os.sep
+
+
 def prepare_environment():
     """Membuat folder keluaran. Menolak bekerja bila path Google Drive dipakai padahal Drive belum ter-mount
     (kalau tidak, folder 'hantu' terbentuk di /content/drive dan drive.mount() berikutnya gagal)."""
-    for d in (CACHE_DIR, TABEL_DIR, METRICS_DIR, FIGURE_DIR):
+    for d in (CACHE_DIR, TABEL_DIR, METRICS_DIR, FIGURE_DIR, CKPT_DIR):
         if d.startswith("/content/drive") and not os.path.isdir("/content/drive/MyDrive"):
             raise RuntimeError("Google Drive belum ter-mount di sesi ini. Jalankan sel drive.mount('/content/drive') "
                                "lebih dulu (setelah mengganti runtime, semua sel harus dijalankan ulang dari atas).")
