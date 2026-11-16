@@ -1,0 +1,7 @@
+Model,AUC,CI95,Akurasi,Recall,Presisi
+Klinis saja (SVM),0.737,"[0.706, 0.766]",0.673,0.558,0.678
+Konektivitas saja (LogReg),0.759,"[0.725, 0.791]",0.697,0.658,0.678
+Late fusion (LogReg + SVM),0.810,"[0.781, 0.839]",0.741,0.663,0.748
+Deep: ROI-Transformer (konek. saja),0.671,"[0.634, 0.707]",0.629,0.623,0.595
+Deep: + klinis (concat),0.730,"[0.698, 0.760]",0.649,0.613,0.622
+Deep: + klinis (cross-attention),0.686,"[0.652, 0.723]",0.636,0.615,0.605

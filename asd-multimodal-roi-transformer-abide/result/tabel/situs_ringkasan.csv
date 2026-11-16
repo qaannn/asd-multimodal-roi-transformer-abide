@@ -1,0 +1,7 @@
+Model,AUC pooled,AUC dalam-situs (berbobot N),AUC dalam-situs (rata-rata ± SD),Situs dihitung
+Klinis saja (SVM),0.659,0.647,0.634 ± 0.076,10
+Konektivitas saja (LogReg),0.759,0.756,0.739 ± 0.073,10
+Late fusion (LogReg + SVM),0.779,0.780,0.766 ± 0.067,10
+Deep: ROI-Transformer (konek. saja),0.672,0.668,0.663 ± 0.085,10
+Deep: + klinis (concat),0.699,0.702,0.684 ± 0.076,10
+Deep: + klinis (cross-attention),0.685,0.690,0.684 ± 0.067,10

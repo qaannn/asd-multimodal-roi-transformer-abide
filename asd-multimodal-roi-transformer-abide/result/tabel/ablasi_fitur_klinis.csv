@@ -1,0 +1,8 @@
+Varian klinis,AUC klinis saja,AUC late fusion + konektivitas
+(konektivitas saja; pembanding),,0.759
+A. 7 fitur + penanda hilang (konfigurasi run 1),0.737,0.810
+B. 7 fitur tanpa penanda hilang (konfigurasi utama),0.659,0.779
+C. 6 fitur tanpa EYE + penanda hilang,0.681,0.787
+D. 6 fitur tanpa EYE tanpa penanda hilang,0.660,0.779
+E. IQ saja (FIQ VIQ PIQ),0.641,0.776
+F. umur + jenis kelamin saja,0.467,0.754

@@ -1,0 +1,4 @@
+Tahap,Subjek tersisa,Dikeluarkan,ASD,Kontrol
+0. Fenotipe ABIDE I (ASD + kontrol),1112,-,539,573
+1. FILE_ID != no_filename (citra tersedia),1035,77,505,530
+2. Tersedia di ABIDE PCP (C-PAC; quality_checked=True) & cocok SUB_ID,871,164,403,468
