@@ -1,6 +1,0 @@
-Pembanding,Situs late fusion lebih tinggi,Rata-rata selisih AUC,p Wilcoxon (indikatif)
-Klinis saja (SVM),10 dari 10,0.131,0.0020
-Konektivitas saja (LogReg),8 dari 10,0.026,0.0098
-Deep: ROI-Transformer (konek. saja),8 dari 10,0.103,0.0078
-Deep: + klinis (concat),10 dari 10,0.081,0.0020
-Deep: + klinis (cross-attention),9 dari 10,0.081,0.0059
